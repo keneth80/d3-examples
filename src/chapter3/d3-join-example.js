@@ -11,6 +11,13 @@ export class D3JoinExample {
         this.svgHeight = 0;
         this.selector = configuration.selector;
         this.data = configuration.data;
+        this.lineFunction = line()
+            .x((d) => {
+                return d.x; 
+            })
+            .y((d) => { 
+                return d.y; 
+            });
         this.init();
         this.draw();
     }
@@ -31,38 +38,28 @@ export class D3JoinExample {
     draw() {
         // line group
         const lineGroup = this.svg.append('g').attr('class', 'line-group');
-
+        
         // 도형 group
         const geometryGroup = this.svg.append('g').attr('class', 'geometry-group');
 
         geometryGroup.selectAll('.shape-rect').data(this.data).enter()
             .append('rect')
                 .attr('class', 'shape-rect')
-                .attr('id', (d) => d.id)
                 .attr('x', (d) => d.position.x)
                 .attr('y', (d) => d.position.y)
-                // .attr('x', (d, i) => 10 + (50 * i) + (d.size.width * i))
-                // .attr('y', 10)
                 .attr('width', (d) => d.size.width)
                 .attr('height', (d) => d.size.height)
                 .style('stroke', '#000')
-                .style('fill', '#FF00FF');
-
-        const lineFunction = line()
-            .x((d) => {
-                return d.x; 
-            })
-            .y((d) => { 
-                return d.y; 
-            });
-
+                .style('fill', '#ff00ff');
+        
+        
         lineGroup.selectAll('.line').data(this.getPosition()).enter()
             .append('path')
                 .attr('class', 'line')
                 .style('stroke', '#000000')
                 .style('stroke-width', 5)
                 .attr('d', (data) => {
-                    return lineFunction(data);
+                    return this.lineFunction(data);
                 });
     }
 
@@ -70,16 +67,13 @@ export class D3JoinExample {
         const positions = [];
         this.svg.select('.geometry-group').selectAll('.shape-rect')
             .each((data, index, nodeList) => {
-                const currentTarget = select(nodeList[index]);
                 const nextTarget = nodeList[index + 1];
                 const position = [];
-
                 // from position
                 position.push({
                     x: data.position.x + data.size.width/2, // width
                     y: data.position.y + data.size.height/2
                 });
-                
                 // to position
                 if (nextTarget) {
                     const nextTargetSelection = select(nextTarget);
@@ -94,49 +88,37 @@ export class D3JoinExample {
     }
 
     update(data) {
-        const geometryElements = this.svg.select('.geometry-group').selectAll('.shape-rect').data(data)
+        this.data = data;
+        const elements = this.svg.select('.geometry-group')
+        .selectAll('.shape-rect').data(this.data)
             .join(
-                (enter) => enter
-                            .append('rect')
-                            .attr('class', 'shape-rect'),
+                (enter) => enter.append('rect').attr('class', 'shape-rect'),
                 (update) => update,
                 (exit) => exit.remove()
             );
-
-        geometryElements
-            .attr('id', (d) => d.id)
+        
+        elements
             .attr('x', (d) => d.position.x)
             .attr('y', (d) => d.position.y)
-            // .attr('x', (d, i) => 10 + (50 * i) + (d.size.width * i))
-            // .attr('y', 10)
             .attr('width', (d) => d.size.width)
             .attr('height', (d) => d.size.height)
             .style('stroke', '#000')
-            .style('fill', '#FF00FF');
+            .style('fill', '#ff00ff');
 
-        const lineElements = this.svg.select('.line-group').selectAll('.line').data(this.getPosition())
+        const lineElements = this.svg.select('.line-group')
+            .selectAll('.line').data(this.getPosition())
             .join(
-                (enter) => enter
-                            .append('path')
-                            .attr('class', 'line'),
+                (enter) => enter.append('path').attr('class', 'line'),
                 (update) => update,
-                (exit) => exit.remove()
+                (exit) => exit.remove
             );
 
-        const lineFunction = line()
-            .x((d) => {
-                return d.x; 
-            })
-            .y((d) => { 
-                return d.y; 
-            });
-
-        lineElements.attr('class', 'line')
+        lineElements
             .style('stroke', '#000000')
-            .style('stroke-width', 5)
-            .attr('d', (data) => {
-                return lineFunction(data);
-            });
-
+                .style('stroke-width', 5)
+                .attr('d', (data) => {
+                    return this.lineFunction(data);
+                });
     }
+
 }
