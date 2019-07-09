@@ -1,6 +1,46 @@
 import { select } from 'd3-selection';
 import { line } from 'd3-shape';
 
+export const excute = () => {
+    const shapeList = [
+        {
+            size: {
+                width: 100,
+                height: 100
+            },
+            position: {
+                x: 10,
+                y: 10
+            },
+            id: '1'
+        },
+        {
+            size: {
+                width: 100,
+                height: 100
+            },
+            position: {
+                x: 150,
+                y: 10
+            },
+            id: '2'
+        },
+        {
+            size: {
+                width: 100,
+                height: 100
+            },
+            position: {
+                x: 290,
+                y: 10
+            },
+            id: '3'
+        }
+    ]
+    const d3ShapeExample = new D3ShapeExample({selector: '#result', data: shapeList});
+
+};
+
 export class D3ShapeExample {
     constructor(configuration = {
         selector,
