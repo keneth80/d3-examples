@@ -84,7 +84,7 @@ export class D3ZoomDragExample {
         this.svgHeight = parseFloat(this.svg.style('height'));
 
         // zoom setup
-        this.zoomObj = zoom().touchable(true) // touchable : mobile
+        this.zoomObj = zoom()// .touchable(true) // touchable : mobile
             .scaleExtent([0.5, 2])
             .on('zoom', () => {
                 this.currentTransform = event.transform;
@@ -110,7 +110,7 @@ export class D3ZoomDragExample {
                 .style('stroke', '#000')
                 .style('fill', '#ff00ff')
                 .call(
-                    drag().touchable(true)
+                    drag()// .touchable(true)
                         .on('start', (d) => {
                             console.log('start : ', d);
                         })
