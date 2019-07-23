@@ -1,6 +1,6 @@
-import { select } from 'd3-selection';
+import { select, event } from 'd3-selection';
 import { line, linkHorizontal, linkVertical } from 'd3-shape';
-import { dispatch } from 'd3-dispatch';
+import { brush } from 'd3-brush';
 
 export const excute = () => {
     const shapeList = [
@@ -22,7 +22,7 @@ export const excute = () => {
             },
             position: {
                 x: 150,
-                y: 250
+                y: 150
             },
             id: '2'
         },
@@ -52,7 +52,16 @@ export class D3BrushMiniMapExample {
         this.svgHeight = 0;
         this.selector = configuration.selector;
         this.data = configuration.data;
-        this.dispatch = dispatch('foo', 'bar');
+
+        this.minimapGroup = null;
+        this.minimapWidth = 0;
+        this.minimapHeight = 0;
+        this.minimapMargin = {right: 20, bottom: 20};
+        this.scale = 2;
+        this.ratio = 4;
+
+        this.mask = null;
+
         this.init();
         this.draw();
     }
@@ -68,12 +77,31 @@ export class D3BrushMiniMapExample {
         // svg size check
         this.svgWidth = parseFloat(this.svg.style('width'));
         this.svgHeight = parseFloat(this.svg.style('height'));
+
+        // minimap group
+        this.minimapWidth = this.svgWidth / this.ratio;
+        this.minimapHeight = this.svgHeight / this.ratio;
+        this.minimapGroup = this.svg.append('g')
+            .attr('transform', `translate(${(this.svgWidth - this.minimapWidth - this.minimapMargin.right)}, ${(this.svgHeight - this.minimapHeight- this.minimapMargin.bottom)})`);
+        this.minimapGroup.append('rect')
+            .style('fill', '#ccc')
+            .style('stroke', '#888')
+            .attr('class', 'minimap')
+            .attr('width', this.minimapWidth)
+            .attr('height', this.minimapHeight);
+
+        // mask setup
+        this.maks = this.svg.append('defs')
+            .append('svg:clipPath')
+            .attr('id', 'clip')
+                .append('rect')
+                .attr('x', 0)
+                .attr('y', 0)
+                .attr('width', 200)
+                .attr('height', 100);
     }
 
     draw() {
-        // line group
-        const lineGroup = this.svg.append('g').attr('class', 'line-group');
-        
         // 도형 group
         const geometryGroup = this.svg.append('g').attr('class', 'geometry-group');
 
@@ -87,72 +115,52 @@ export class D3BrushMiniMapExample {
                 .style('stroke', '#000')
                 .style('fill', '#ff00ff');
 
-        const positions = [];
-        geometryGroup.selectAll('.shape-rect')
-            .each((data, index, nodeList) => {
-                const nextTarget = nodeList[index + 1];
-                const position = [];
-                // from position
-                position.push({
-                    x: data.position.x + data.size.width/2, // width
-                    y: data.position.y + data.size.height/2
-                });
-                
-                // to position
-                if (nextTarget) {
-                    const nextTargetSelection = select(nextTarget);
-                    position.push({
-                        x: parseFloat(nextTargetSelection.attr('x')) + data.size.width/2, // not
-                        y: parseFloat(nextTargetSelection.attr('y')) + data.size.height/2
-                    });
-                }
-                positions.push(position);
-            });
-        
-        const lineFunction = line()
-            .x((d) => {
-                return d.x; 
-            })
-            .y((d) => { 
-                return d.y; 
-            });
-        
-        lineGroup.selectAll('.line').data(positions).enter()
-            .append('path')
-                .attr('class', 'line')
-                .style('stroke', '#000000')
-                .style('stroke-width', 5)
-                .attr('d', (data) => {
-                    return lineFunction(data);
-                });
+        // minimap 도형 group
+        const minimapGeometryGroup = this.minimapGroup.append('g').attr('class', 'minimap-geometry-group');
 
-        const hlink = linkHorizontal()
-            .source((d) => d[0])
-            .target((d) => d[1])
-            .x((d) => {
-                return d.x; 
-            })
-            .y((d) => { 
-                return d.y; 
+        minimapGeometryGroup.selectAll('.shape-rect').data(this.data).enter()
+        .append('rect')
+            .attr('class', 'shape-rect')
+            .attr('x', (d) => d.position.x)
+            .attr('y', (d) => d.position.y)
+            .attr('width', (d) => d.size.width)
+            .attr('height', (d) => d.size.height)
+            .style('stroke', '#000')
+            .style('fill', '#ff00ff');
+
+        minimapGeometryGroup.attr('transform', 'translate(0,0) scale(0.25)');
+
+        this.drawMiniMap();
+    }
+
+    drawMiniMap() {
+        this.svg.select('.geometry-group')
+            .attr('transform', `translate(0,0) scale(${this.scale})`)
+            .attr('clip-path', () => { return 'url(#clip)'; });
+
+        const brushMng = brush()
+            .extent([[0, 0], [this.minimapWidth, this.minimapHeight]])
+            .on('start brush', () => {
+                const selected = event.selection;
+                const position = selected[0]; // position informatin
+                const size = selected[1]; // size informaion
+
+                // group은 scale을 적용했으므로 scale 과 비율을 적용함.
+                const brushX = (-position[0]) * this.ratio * this.scale;
+                const brushY = (-position[1]) * this.ratio * this.scale;
+                this.svg.selectAll('.geometry-group')
+                    .attr('transform', `translate(${brushX}, ${brushY}) scale(${this.scale})`);
+
+                // mask는 scale을 조정하지 않았으므로 scale 적용안함.
+                this.maks.attr('width', size[0] * this.ratio)
+                    .attr('height', size[1] * this.ratio);
             });
 
-        const vlink = linkVertical()
-            .source((d) => d[0])
-            .target((d) => d[1])
-            .x((d) => {
-                return d.x; 
-            })
-            .y((d) => { 
-                return d.y; 
-            });
-
-        lineGroup.selectAll('.radial-line').data(positions.filter((item) => item.length > 1))
-            .join(
-                (enter) => enter.append('path').attr('class', 'radial-line')
-            )
-            .attr('d', vlink)
-            .attr('stroke', '#ffff00')
-            .attr('stroke-width', 4)
-            .attr('fill', 'none');
+        this.minimapGroup.raise();
+      
+        this.minimapGroup.append('g')
+            .attr('class', 'brush')
+            .call(brushMng)
+            .call(brushMng.move, [[0, 0], [this.minimapWidth / 2, this.minimapHeight / 2]]);
     }
 }

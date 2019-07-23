@@ -52,7 +52,6 @@ export class D3RadialLinkExample {
         this.svgHeight = 0;
         this.selector = configuration.selector;
         this.data = configuration.data;
-        this.dispatch = dispatch('foo', 'bar');
         this.init();
         this.draw();
     }
